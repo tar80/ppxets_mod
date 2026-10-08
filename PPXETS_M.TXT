@@ -1,0 +1,156 @@
+------------------------------------------------------------------------------
+  PPxUI Everything Search Module Modification  R5.1.0
+  (c)2026 tar80
+------------------------------------------------------------------------------
+
+TORO氏作のPPXETS(メッセージ通信版)を元にした、更新+拡張版です。
+tar80の私的な制作物であり、動作の保証はできません。自己責任でご利用ください。
+
+
+■ 概要
+
+PPXETS_R5をベースに、Everything 1.4以降でのメッセージ通信と、migemoによる
+ローマ字検索に対応しました。
+ETS64bit版のみを提供します。32bit版とETP通信版は対象外です。
+
+
+PPXETS_R5からの変更点:
+ ・Everything 1.4以降でのメッセージ通信に対応した
+ ・Everythingが見つからない/応答しない場合の待機状態を調整した
+   (応答待ちにタイムアウトを設定。失敗後は一定時間再試行しない)
+ ・結果データの範囲チェックを追加(長いパスなどでのバッファ超過を防止)
+ ・Everythingの検出方法を柔軟にした
+ ・migemoによるローマ字検索に対応した
+
+
+■ 動作環境・導入
+
+ ・PPxUI 64bit版
+ ・Everything 1.4以降
+ ・PPXETS64_M.DLL
+ ・migemo.dll 1.8.0以降(optional)
+
+ PPxのインストールディレクトリにPPXETS64_M.DLLを配置してください。
+ ローマ字検索を使う場合は、migemo.dllと辞書も必要です。
+
+ ※PPXETS64.DLL / PPXETP64.DLLと同時には使えません。別の場所に移動してください。
+   同時に読み込まれている間は、本モジュールは何もしません。
+
+
+■ 使い方
+
+一行編集の自動補完(X_flst ≧ 3)と、PPcのWhereis(Ctrl+W)で利用できます。
+Where isでは、「ファイル内」ボタンを「検索モジュール」に切り替えてください。
+
+
+■ 設定
+
+ _User = {
+ ETP_FULL = 10000          ; 詳細検索時の最大回答数(Where is)。0で検索しない
+ ETP_PART = 50             ; 簡易検索時の最大回答数(一行編集の補完)。0で検索しない
+ ETS_TIMEOUT_FULL = 10000  ; 詳細検索時のタイムアウト(ms) 標準10000 / 下限100
+ ETS_TIMEOUT_PART = 2000   ; 簡易検索時のタイムアウト(ms) 標準2000 / 下限100
+ ETS_RETRY = 10000         ; 失敗後に再試行しない時間(ms) 標準10000 / 0で毎回試行
+ ETS_MIGEMO = 0            ; migemoの対象。0:無効, 1:Whereis, 2:一行編集, 3:両方
+ ETS_MIGEMOMIN = 2         ; migemoに送る検索語の最小文字数(1〜64) 標準2
+ ETS_MIGEMODICT =          ; migemo辞書ファイルのパス(省略可)
+ ETS_MIGEMODLL =           ; migemo.dllのパス(省略可)
+ }
+
+
+ETS_RETRYは、Everythingを検出できなかったときに再実行するまでの時間です。
+値を大きくすると、通知の再実行までの間隔も長くなります。
+0 を指定すると入力ごとにEverythingを探しに行きます。
+
+
+■ migemo検索
+
+ETS_MIGEMOでmigemoを使う範囲を指定します。
+ 0 ... 無効
+ 1 ... Whereisのみ
+ 2 ... 一行編集のみ
+ 3 ... 両方
+ 上記以外の値は0扱いです。
+
+ ※migemo検索は、Everythingの膨大なデータベースへの正規表現検索になるため、
+ 一行編集実行時には大幅な遅延が発生します。
+
+migemoを使う検索語の条件:
+ ・空白を含まない1語(2語以上の検索には適用しません)
+ ・ETS_MIGEMOMIN〜64文字で、英字を1文字以上含む
+ ・使える文字は、半角英数字と次の記号のみ
+      - _ . ( ) [ ] + # & @ , ; ' = ~ ^ $ %
+   Everythingの検索構文で意味を持つ文字(* ? ! | " < > :)、パス区切り(\ /)、
+   空白、全角文字を含む場合はmigemoを使わず通常検索になります。
+migemoが生成した正規表現を、Everythingの正規表現検索として送ります。
+生成結果が4000文字を超える場合は通常検索になります。
+
+使用するファイル(C/Migemo 1.8.0以降、64bit版):
+ ・migemo.dll ........ 既定: PPXETS64_M.DLLと同じディレクトリ
+                       (ETS_MIGEMODLLで変更可)
+ ・辞書 .............. ETS_MIGEMODICTがあればそれを使用。無ければ
+                       PPXETS64_M.DLLのディレクトリを基準に
+                       dict\utf-8\migemo-dict、なければ
+                       dict\cp932\migemo-dictを探します。
+ 辞書の初回読み込みには時間がかかることがあります。読み込みに失敗した場合は
+ 通知を一度だけ表示し、通常検索にします。
+ 辞書パスはmigemo.dllの仕様上、ANSI(システムコードページ)で表現できる
+ パスである必要があります。
+
+
+■ エラー通知
+
+通知は、PPXETSと同じ方法で、候補リストの末尾に項目として表示されます。
+次の場合にのみ表示します。
+ ・エラーの種類が変わったとき
+ ・一度成功した後に再発したとき
+ ・検索がETS_RETRY(最低10秒)以上途切れた後の、最初の検索のとき
+
+通知の種類:
+ ・Everything is not running.      ... Everythingが見つからない
+ ・Everything is not responding.   ... 応答がタイムアウトした
+ ・Everything rejected the query.  ... 問い合わせを拒否された
+ ・Access to Everything was denied ... 権限の違い等で通信できない
+ ・migemo is unavailable.          ... migemoを使えない
+ ・internal error.                 ... 内部エラー
+
+問い合わせの拒否が発生した場合は、Everything.iniの"ipc"の項目が"1"に
+なっているか確認してください。
+
+
+■ 既知の制限・未検証事項
+
+ ・EverythingとPPxで権限(管理者権限か否か)が異なると通信できません。
+ ・Everythingのデータベース読み込み中は、検索結果が空、またはタイムアウト
+   になる場合があります。
+ ・migemoの正規表現とEverythingの正規表現の互換性は未検証です。
+
+
+■ ビルド方法
+
+Visual Studio Build Tools (C++)の x64 Native Tools Command Prompt を使用します。
+
+ ・MAKEFILE, PPXETS_M.C, PPXETS_M.RC (リポジトリのsrcディレクトリ内)
+ ・PPCOMMON.H, TOROWIN.H (ppxets05.zip内のPPXETSRC.LZH)
+   https://toroidj.github.io/ppx/ppxets05.zip
+ ・everything_ipc.h (Everything-SDK.zip内のipcディレクトリ)
+   https://www.voidtools.com/Everything-SDK.zip
+
+これらを同じフォルダに配置し、コマンドを実行してください。
+  nmake         ... ビルド
+  nmake clean   ... 生成されたファイルの削除
+
+
+■ 権利など
+
+ ・PPXETSの著作権はTORO(高橋良和)氏にあります。
+ ・このmod版の使用による損害等について責任は負いません。
+
+
+■ 履歴
+
+R5.1.0 2026/10/09
+・初版
+・Everything 1.4以降でのメッセージ通信に対応
+・migemoによるローマ字検索を追加
+・タイムアウト・失敗後の再試行抑止を追加
