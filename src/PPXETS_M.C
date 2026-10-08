@@ -4,7 +4,7 @@
 	Based on PPXETS (message communication version) by TORO.
 	This is an updated / extended version. 64bit only.
 
-	- Target : Everything 1.5 or later (WM_COPYDATA IPC)
+	- Target : Everything 1.4 or later (WM_COPYDATA IPC)
 	- Option : migemo search (C/Migemo 1.6.1 or later, 64bit migemo.dll)
 	- Build  : see MAKEFILE (nmake, MSVC x64)
 
@@ -31,14 +31,14 @@
 #define REPLY_COPYDATA_ID	0x123456	/* dwData of Everything's reply */
 #define REPLY_CLASSNAME		L"PPXETS_M_IPC"
 
-#define DEF_TIMEOUT_PART	2000	/* ms, simple search (maxresults <= 100) */
-#define DEF_TIMEOUT_FULL	10000	/* ms, detailed search */
+#define DEF_TIMEOUT_PART	2000		/* ms, simple search (maxresults <= 100) */
+#define DEF_TIMEOUT_FULL	10000		/* ms, detailed search */
 #define DEF_RETRY			10000	/* ms, negative cache after a failure */
-#define MIN_TIMEOUT			100		/* ms, lower clamp */
+#define MIN_TIMEOUT			100	/* ms, lower clamp */
 #define FIND_TIMEOUT		500		/* ms, version query to find the window */
 #define CFG_REFRESH			3000	/* ms, interval of re-reading settings */
-#define MIGEMO_RETRY		30000	/* ms, retry interval after a load failure */
-#define MSGRESET_MIN		10000	/* ms, lower limit of the idle time that re-arms the notice */
+#define MIGEMO_RETRY		30000		/* ms, retry interval after a load failure */
+#define MSGRESET_MIN		10000		/* ms, lower limit of the idle time that re-arms the notice */
 
 #define DEF_MIGEMOMIN		2
 #define MIGEMO_MAX_LEN		64
@@ -69,13 +69,13 @@ typedef void (WINAPI *MIGEMO_SET_ESCAPE)(void *mo, const unsigned char *chars);
 	types / globals
 ----------------------------------------------------------------------------*/
 typedef struct {
-	DWORD full, part;			/* ETP_FULL / ETP_PART */
+	DWORD full, part;		/* ETP_FULL / ETP_PART */
 	DWORD tmoFull, tmoPart;		/* ms, ETS_TIMEOUT_FULL / ETS_TIMEOUT_PART */
-	DWORD retry;				/* ms, 0 = no negative cache */
-	int migemo;					/* 0 = off, 1 = Where is, 2 = one line editor, 3 = both */
-	DWORD migemoMin;			/* ETS_MIGEMOMIN: minimum length of a keyword for migemo */
-	WCHAR dict[VFPS];			/* ETS_MIGEMODICT (empty = default) */
-	WCHAR dll[VFPS];			/* ETS_MIGEMODLL  (empty = default) */
+	DWORD retry;			/* ms, 0 = no negative cache */
+	int migemo;			/* 0 = off, 1 = Where is, 2 = one line editor, 3 = both */
+	DWORD migemoMin;		/* ETS_MIGEMOMIN: minimum length of a keyword for migemo */
+	WCHAR dict[VFPS];		/* ETS_MIGEMODICT (empty = default) */
+	WCHAR dll[VFPS];		/* ETS_MIGEMODLL  (empty = default) */
 } ETSCONFIG;
 
 typedef struct {
@@ -93,23 +93,23 @@ static ETSCONFIG Cfg;
 static BOOL CfgLoaded = FALSE;
 static ULONGLONG CfgTick = 0;
 static BOOL ClassRegistered = FALSE;
-static HWND hEverything = NULL;			/* cached Everything window */
-static ULONGLONG RetryUntil = 0;		/* negative cache expire (tick) */
+static HWND hEverything = NULL;		/* cached Everything window */
+static ULONGLONG RetryUntil = 0;	/* negative cache expire (tick) */
 static ULONGLONG LastSearchTick = 0;	/* tick of the previous search */
-static int LastErr = ERR_NONE;			/* last notified error kind */
+static int LastErr = ERR_NONE;		/* last notified error kind */
 
 /* csMigemo protects all migemo state below */
 static CRITICAL_SECTION csMigemo;
 static HMODULE hMigemoDll = NULL;
 static void *MigemoObj = NULL;
-static UINT MigemoCP = CP_UTF8;			/* charset of the dictionary */
+static UINT MigemoCP = CP_UTF8;		/* charset of the dictionary */
 static MIGEMO_CLOSE pMigemoClose;
 static MIGEMO_QUERY pMigemoQuery;
 static MIGEMO_RELEASE pMigemoRelease;
-static BOOL MigemoFailed = FALSE;		/* last load attempt failed */
+static BOOL MigemoFailed = FALSE;	/* last load attempt failed */
 static ULONGLONG MigemoFailTick = 0;
-static BOOL MigemoWarned = FALSE;		/* failure already notified */
-static WCHAR MigemoKeyDict[VFPS];		/* settings used for the load */
+static BOOL MigemoWarned = FALSE;	/* failure already notified */
+static WCHAR MigemoKeyDict[VFPS];	/* settings used for the load */
 static WCHAR MigemoKeyDll[VFPS];
 
 /*----------------------------------------------------------------------------
@@ -279,8 +279,8 @@ static void GetConfig(PPXAPPINFOW *ppxa, ETSCONFIG *out)
 	Everything window detection
 ----------------------------------------------------------------------------*/
 typedef struct {
-	HWND exact;		/* class name exactly matches (default instance) */
-	HWND other;		/* class name has an instance suffix */
+	HWND exact;	/* class name exactly matches (default instance) */
+	HWND other;	/* class name has an instance suffix */
 	BOOL denied;	/* a candidate existed but access was denied */
 } FINDCTX;
 
@@ -907,7 +907,7 @@ EXTDLL int PPXAPI ModuleEntry(PPXAPPINFOW *ppxa, DWORD cmdID, PPXMODULEPARAM pxs
 		if ( pxs.info->infotype == 0 ){
 			pxs.info->typeflags = PPMTYPEFLAGS(PPXMEVENT_SEARCH);
 			wcscpy(pxs.info->copyright,
-				L"PPXETS_M (PPx Everything Search Module, migemo edition) based on PPXETS Copyright (c)TORO");
+				L"PPXETS_M (PPx Everything Search Module Modification) based on PPXETS Copyright (c)TORO");
 			return TRUE;
 		}
 	}

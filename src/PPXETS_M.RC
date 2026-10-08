@@ -6,9 +6,9 @@
 
 #define VER_MAJOR 5
 #define VER_MINOR 1
-#define VER_PATCH 0
+#define VER_PATCH 1
 #define VER_BUILD 0
-#define VER_STR   "5.1.0"
+#define VER_STR   "5.1.1"
 
 VS_VERSION_INFO VERSIONINFO
  FILEVERSION VER_MAJOR,VER_MINOR,VER_PATCH,VER_BUILD
@@ -23,7 +23,7 @@ BEGIN
 	BEGIN
 		BLOCK "040904B0"
 		BEGIN
-			VALUE "FileDescription", "PPx Everything Search Module (migemo edition)\0"
+			VALUE "FileDescription", "PPx Everything Search Module Modification\0"
 			VALUE "FileVersion", VER_STR "\0"
 			VALUE "InternalName", "PPXETS64_M\0"
 			VALUE "OriginalFilename", "PPXETS64_M.DLL\0"
