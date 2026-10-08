@@ -1,0 +1,6 @@
+MAKEFILE text eol=crlf
+*.C text eol=crlf
+*.RC text eol=crlf
+*.TXT text eol=crlf
+*.yml text eol=lf
+*.md text eol=lf
