@@ -1,0 +1,145 @@
+name: build-release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  PPXETS_URL: https://toroidj.github.io/ppx/ppxets05.zip
+  EVERYTHING_SDK_URL: https://www.voidtools.com/Everything-SDK.zip
+  # Optional pinning. Leave empty to only print the hashes in the log.
+  PPXETS_SHA256: ''
+  EVERYTHING_SDK_SHA256: ''
+  # Emulate the original (cp932) build environment for the downloaded headers.
+  CL: /source-charset:.932 /wd4819
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Read version from PPXETS_M.RC
+        id: ver
+        shell: pwsh
+        run: |
+          $rc = Get-Content -Raw src/PPXETS_M.RC
+          if ($rc -notmatch '#define\s+VER_STR\s+"([^"]+)"') { throw 'VER_STR not found in PPXETS_M.RC' }
+          $ver = $Matches[1]
+          "version=$ver" >> $env:GITHUB_OUTPUT
+          if ($env:GITHUB_REF_TYPE -eq 'tag') {
+            $tagver = $env:GITHUB_REF_NAME -replace '^v',''
+            if ($tagver -ne $ver) { throw "Tag '$($env:GITHUB_REF_NAME)' does not match VER_STR '$ver' in PPXETS_M.RC" }
+          }
+          Write-Host "version = $ver"
+
+      - name: Download headers
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Force dl, build | Out-Null
+
+          function Get-Zip($url, $out, $expect) {
+            Invoke-WebRequest -Uri $url -OutFile $out -UserAgent 'Mozilla/5.0' -MaximumRetryCount 3 -RetryIntervalSec 5
+            $h = (Get-FileHash $out -Algorithm SHA256).Hash.ToLower()
+            Write-Host "$out sha256 = $h"
+            if ($expect -and ($h -ne $expect.ToLower())) { throw "SHA256 mismatch for $out" }
+          }
+
+          function Copy-Required($path, $dest) {
+            if (-not (Test-Path -LiteralPath $path)) {
+              Write-Host "---- missing: $path ; tree under dl ----"
+              Get-ChildItem dl -Recurse | ForEach-Object { Write-Host $_.FullName }
+              throw "required file not found: $path"
+            }
+            Copy-Item -LiteralPath $path $dest
+          }
+
+          # 7-Zip is preinstalled on windows-latest; it is needed for the LZH archive.
+          $sevenzip = Join-Path $env:ProgramFiles '7-Zip\7z.exe'
+          if (-not (Test-Path $sevenzip)) {
+            choco install 7zip -y --no-progress
+            $sevenzip = Join-Path $env:ProgramFiles '7-Zip\7z.exe'
+          }
+          if (-not (Test-Path $sevenzip)) { throw '7z.exe not found' }
+
+          Get-Zip $env:PPXETS_URL 'dl/ppxets05.zip' $env:PPXETS_SHA256
+          Get-Zip $env:EVERYTHING_SDK_URL 'dl/Everything-SDK.zip' $env:EVERYTHING_SDK_SHA256
+
+          Expand-Archive dl/ppxets05.zip -DestinationPath dl/ppxets -Force
+          Expand-Archive dl/Everything-SDK.zip -DestinationPath dl/sdk -Force
+
+          # ppxets05.zip contains PPXETSRC.LZH (the source archive)
+          $lzh = 'dl/ppxets/PPXETSRC.LZH'
+          if (-not (Test-Path -LiteralPath $lzh)) {
+            Write-Host "---- missing: $lzh ; tree under dl ----"
+            Get-ChildItem dl -Recurse | ForEach-Object { Write-Host $_.FullName }
+            throw "required file not found: $lzh"
+          }
+          & $sevenzip x -y "-odl/ppxetsrc" $lzh | Out-Host
+          if ($LASTEXITCODE -ne 0) { throw '7z failed to extract PPXETSRC.LZH' }
+
+          Copy-Required 'dl/ppxetsrc/TOROWIN.H' build/
+          Copy-Required 'dl/ppxetsrc/PPCOMMON.H' build/
+          Copy-Required 'dl/sdk/ipc/everything_ipc.h' build/
+          Copy-Item src/* build/
+          Get-ChildItem build | Format-Table Name, Length
+
+      - name: Build
+        shell: cmd
+        working-directory: build
+        run: nmake
+
+      - name: Verify DLL
+        shell: pwsh
+        working-directory: build
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if (-not (Test-Path PPXETS64_M.DLL)) { throw 'PPXETS64_M.DLL was not built' }
+          $m = dumpbin /headers PPXETS64_M.DLL | Select-String 'machine'
+          Write-Host $m
+          if ($m -notmatch 'x64') { throw 'not an x64 DLL' }
+          $v = (Get-Item PPXETS64_M.DLL).VersionInfo
+          Write-Host "FileVersion=$($v.FileVersion) ProductVersion=$($v.ProductVersion)"
+          if ($v.ProductVersion -ne '${{ steps.ver.outputs.version }}') { throw 'embedded version mismatch' }
+
+      - name: Package
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $ver = '${{ steps.ver.outputs.version }}'
+          $zip = "PPXETS_M-$ver.zip"
+          New-Item -ItemType Directory -Force pkg | Out-Null
+          Copy-Item build/PPXETS64_M.DLL pkg/
+          Copy-Item PPXETS_M.TXT pkg/
+          Compress-Archive -Path pkg/* -DestinationPath $zip -Force
+          $h = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLower()
+          "$h *$zip" | Out-File -Encoding ascii SHA256SUMS.txt
+          Get-Content SHA256SUMS.txt
+          "ZIP=$zip" >> $env:GITHUB_ENV
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PPXETS_M-${{ steps.ver.outputs.version }}
+          path: |
+            ${{ env.ZIP }}
+            SHA256SUMS.txt
+
+      - name: Create release
+        if: github.ref_type == 'tag'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ghargs = @($env:GITHUB_REF_NAME, $env:ZIP, 'SHA256SUMS.txt', '--title', "PPXETS_M $env:GITHUB_REF_NAME", '--generate-notes')
+          if ($env:GITHUB_REF_NAME -match '-') { $ghargs += '--prerelease' }
+          gh release create @ghargs
