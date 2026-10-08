@@ -1,0 +1,39 @@
+/* Version resource for PPXETS64_M.DLL (ASCII only). */
+/* To change the version, edit the values below. */
+/* Version = (PPXETS base release).(mod major).(mod minor), e.g. 5.1.0 = R5 base, 1.0 */
+
+#include <winver.h>
+
+#define VER_MAJOR 5
+#define VER_MINOR 1
+#define VER_PATCH 0
+#define VER_BUILD 0
+#define VER_STR   "5.1.0"
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION VER_MAJOR,VER_MINOR,VER_PATCH,VER_BUILD
+ PRODUCTVERSION VER_MAJOR,VER_MINOR,VER_PATCH,VER_BUILD
+ FILEFLAGSMASK VS_FFI_FILEFLAGSMASK
+ FILEFLAGS 0
+ FILEOS VOS_NT_WINDOWS32
+ FILETYPE VFT_DLL
+ FILESUBTYPE VFT2_UNKNOWN
+BEGIN
+	BLOCK "StringFileInfo"
+	BEGIN
+		BLOCK "040904B0"
+		BEGIN
+			VALUE "FileDescription", "PPx Everything Search Module (migemo edition)\0"
+			VALUE "FileVersion", VER_STR "\0"
+			VALUE "InternalName", "PPXETS64_M\0"
+			VALUE "OriginalFilename", "PPXETS64_M.DLL\0"
+			VALUE "ProductName", "PPXETS_M\0"
+			VALUE "ProductVersion", VER_STR "\0"
+			VALUE "LegalCopyright", "Based on PPXETS Copyright (c) TORO\0"
+		END
+	END
+	BLOCK "VarFileInfo"
+	BEGIN
+		VALUE "Translation", 0x0409, 0x04B0
+	END
+END

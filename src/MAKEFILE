@@ -1,0 +1,34 @@
+# PPXETS_M  64bit only  nmake makefile
+#
+# Build: open "x64 Native Tools Command Prompt for VS", cd to this folder, then
+#   nmake            ... build PPXETS64_M.DLL
+#   nmake clean      ... remove intermediate files
+# Needs in this folder: PPXETS_M.C PPXETS_M.RC TOROWIN.H PPCOMMON.H everything_ipc.h
+# The version number is defined in PPXETS_M.RC.
+
+!if "$(VSCMD_ARG_TGT_ARCH)" == "x86"
+!error 32bit compiler environment. Use the x64 Native Tools Command Prompt.
+!endif
+
+name = PPXETS_M
+tail = 64
+dll = PPXETS$(tail)_M
+
+cc = cl /nologo /c /GF /MT /O2 /Os /W3 /wd4068 /wd4996 /DWIN32 /DNDEBUG /D_WINDOWS /D_USRDLL
+rc = rc /nologo
+linkdll = link /NOLOGO /INCREMENTAL:NO /DLL /MACHINE:AMD64
+libs = Kernel32.lib User32.lib Advapi32.lib
+
+all: $(dll).DLL
+
+$(name).obj: $(name).C TOROWIN.H PPCOMMON.H everything_ipc.h
+	$(cc) /Fo$(name).obj $(name).C
+
+$(name).res: $(name).RC
+	$(rc) /fo$(name).res $(name).RC
+
+$(dll).DLL: $(name).obj $(name).res
+	$(linkdll) $(name).obj $(name).res $(libs) /OUT:$(dll).DLL
+
+clean:
+	-del /Q $(name).obj $(name).res $(dll).lib $(dll).exp $(dll).DLL 2>nul
