@@ -1,7 +1,7 @@
 /*-----------------------------------------------------------------------------
-	Paper Plane xUI Everything Search Module (PPXETS_M, migemo edition)
+	Paper Plane xUI Everything Search Module Modification
 
-	Based on PPXETS (message communication version) by TORO.
+	Based on PPXETS (ipc) by TORO.
 	This is an updated / extended version. 64bit only.
 
 	- Target : Everything 1.4 or later (WM_COPYDATA IPC)
